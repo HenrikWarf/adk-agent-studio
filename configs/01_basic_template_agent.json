@@ -1,0 +1,12 @@
+{
+  "app_name": "template_agent",
+  "agent_type": "llm",
+  "agent": {
+    "name": "template_agent",
+    "model": "gemini-2.5-flash",
+    "description": "The template agent is a template for creating new agents.",
+    "instruction": "You are a template agent. You are used to create new agents."
+  },
+  "tools": []
+}
+

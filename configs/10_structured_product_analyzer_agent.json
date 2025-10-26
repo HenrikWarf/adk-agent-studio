@@ -1,0 +1,46 @@
+{
+  "app_name": "product_analyzer",
+  "agent_type": "llm",
+  "agent": {
+    "name": "product_analyzer",
+    "model": "gemini-2.5-flash",
+    "description": "Analyzes product descriptions and returns structured data",
+    "instruction": "You are a product analyzer. When given a product description, extract key information and return it in the specified JSON format. Be thorough and accurate.",
+    "response_schema": {
+      "type": "object",
+      "properties": {
+        "product_name": {
+          "type": "string",
+          "description": "The name of the product"
+        },
+        "category": {
+          "type": "string",
+          "description": "Product category (e.g., Electronics, Clothing, Food)"
+        },
+        "key_features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of key features or selling points"
+        },
+        "target_audience": {
+          "type": "string",
+          "description": "Who this product is intended for"
+        },
+        "price_range": {
+          "type": "string",
+          "description": "Estimated price range (budget/mid-range/premium)"
+        },
+        "sentiment": {
+          "type": "string",
+          "enum": ["positive", "neutral", "negative"],
+          "description": "Overall sentiment of the description"
+        }
+      },
+      "required": ["product_name", "category", "key_features"]
+    }
+  },
+  "tools": []
+}
+

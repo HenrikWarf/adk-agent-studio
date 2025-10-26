@@ -1,0 +1,12 @@
+{
+  "app_name": "code_reviewer_sequential",
+  "agent_type": "llm",
+  "agent": {
+    "name": "code_reviewer_agent",
+    "model": "gemini-2.5-flash",
+    "description": "Specialized agent for reviewing code and providing feedback.",
+    "instruction": "You are an expert code reviewer. Review the following code:\n\n**Code to Review:**\n```python\n{generated_code}\n```\n\nAnalyze it for: 1) Correctness and potential bugs, 2) Code quality and best practices, 3) Performance issues, 4) Security vulnerabilities, 5) Readability and maintainability. Provide constructive feedback with specific suggestions for improvement. If the code is excellent, state 'No major issues found.'",
+    "output_key": "review_comments"
+  }
+}
+

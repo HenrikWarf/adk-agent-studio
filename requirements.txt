@@ -1,0 +1,11 @@
+# Core dependencies for Agent Template
+google-adk>=0.1.0
+google-genai>=0.1.0
+python-dotenv>=1.0.0
+
+# Web UI dependencies
+streamlit>=1.28.0
+
+# Optional: for YAML config support
+# pyyaml>=6.0
+

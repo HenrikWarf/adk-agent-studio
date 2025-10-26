@@ -1,0 +1,15 @@
+{
+  "app_name": "code_pipeline",
+  "agent_type": "sequential",
+  "agent": {
+    "name": "CodePipelineAgent",
+    "description": "Executes a sequence of code writing, reviewing, and refactoring.",
+    "model": "gemini-2.5-flash"
+  },
+  "sub_agents": [
+    "07_sequential_code_writer_agent",
+    "08_sequential_code_reviewer_agent",
+    "09_sequential_code_refactorer_agent"
+  ]
+}
+

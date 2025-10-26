@@ -1,0 +1,15 @@
+{
+  "app_name": "assistant_with_tools",
+  "agent_type": "llm",
+  "agent": {
+    "name": "assistant_with_tools",
+    "model": "gemini-2.5-flash",
+    "description": "A helpful assistant with access to calculator and web search tools.",
+    "instruction": "You are a helpful assistant with access to tools. Use the calculator tool for mathematical calculations and the web_search tool to find current information. Always use tools when appropriate to provide accurate answers."
+  },
+  "tools": [
+    "calculator",
+    "WebSearchTool"
+  ]
+}
+
