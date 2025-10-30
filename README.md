@@ -2,617 +2,299 @@
 
 > A comprehensive development environment for Google ADK (Agent Development Kit)
 
-Build, test, and deploy production-ready AI agents with an interactive UI, config-based creation, and zero boilerplate. Features include hierarchical agent structures, tool integration, sequential workflows, structured output, and instant code export.
+Build, test, and deploy production-ready AI agents with an interactive UI, config-based creation, and zero boilerplate. Features include hierarchical agent structures, tool integration, sequential workflows, structured output, MCP server management, and instant code export.
 
 ## Features
 
-- **Configuration-driven**: Define agents using JSON or YAML files
-- **Multiple agents**: Easily create and manage different agents with unique behaviors
-- **Session management**: Automatic session and user ID generation for each agent instance
-- **Async/await support**: Modern async Python for efficient I/O operations
-- **Clean API**: Simple, intuitive interface for agent interactions
-- **Web UI**: Interactive Streamlit interface for testing and visualizing agent execution
-- **Structured Output**: Define JSON schemas for consistent, parseable agent responses
-- **Tools System**: Support for both function-based and class-based tools
-- **Sub-Agents**: Hierarchical agent structures with delegation capabilities
-- **Sequential Workflows**: Multi-step pipelines with state passing between agents
-- **MCP Server Management**: Create and manage Model Context Protocol servers with dynamic tool loading
-- **MCP Agent Integration**: Connect agents to MCP servers with auto-start, URL, and mixed tool support
-- **Code Export**: Generate standalone Python code from agent and MCP server configurations
+- **Interactive Web UI**: Streamlit interface for creating, testing, and managing agents
+- **Configuration-driven**: Define agents using JSON files with zero boilerplate
+- **Hierarchical Agents**: Sub-agents and coordinator patterns for complex workflows
+- **Sequential Pipelines**: Multi-step workflows with state passing between agents
+- **Tool System**: Function-based and class-based tools with auto-discovery
+- **MCP Integration**: Create and manage Model Context Protocol servers, connect agents to MCP tools
+- **Structured Output**: JSON schemas with Pydantic validation for consistent responses
+- **AI-Powered**: Auto-generate agent instructions and custom tools using AI
+- **Code Export**: Generate standalone Python code from any agent configuration
+- **Session Management**: Automatic conversation history and context retention
 
 ## Installation
 
-1. Ensure you have Python 3.8+ installed
-2. Install dependencies:
+### 1. Prerequisites
+
+- Python 3.8 or higher
+- pip (Python package installer)
+
+### 2. Clone and Setup
+
 ```bash
+git clone <your-repository-url>
+cd adk-agent-manager
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Unix/Mac/Linux:
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-3. Set up environment variables in `.env` file (if needed)
+### 3. Environment Variables
+
+Create `agent_def/.env` from the template:
+
+```bash
+cd agent_def
+cp .env.example .env  # or create manually
+```
+
+Edit `agent_def/.env` with your configuration:
+
+```env
+# Google Cloud / Vertex AI Configuration
+GOOGLE_GENAI_USE_VERTEXAI=false
+GOOGLE_CLOUD_PROJECT=your_project_id
+GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_API_KEY=your_google_api_key_here
+GOOGLE_APPLICATION_CREDENTIALS=agent_def/sa/your-service-account-key.json
+
+# Optional: Tool APIs
+WEATHER_API_KEY=your_weather_api_key_here
+SEARCH_API_KEY=your_search_api_key_here
+SEARCH_ENGINE=google
+
+# Optional: MCP Server Configuration
+PORT=8000
+TRANSPORT=http
+```
+
+**Getting API Keys:**
+- **Google AI API Key**: Get from [Google AI Studio](https://makersuite.google.com/app/apikey) (required if not using Vertex AI)
+- **Vertex AI**: Set `GOOGLE_GENAI_USE_VERTEXAI=true` and provide project ID, location, and service account credentials
+- **Weather/Search APIs**: Optional, for enhanced tool functionality
+
+**Note:** The `.env` file is git-ignored. Never commit API keys or credentials to version control.
 
 ## Quick Start
 
-### Option 1: Web UI (Recommended)
+### Web UI (Recommended)
 
-The easiest way to get started is using the interactive web interface:
+Launch the interactive interface:
 
 ```bash
-# Windows
-run_ui.bat
-
-# Unix/Mac
-bash run_ui.sh
-
-# Or directly
 streamlit run app.py
+# Or use the platform-specific scripts:
+# Windows: run_ui.bat
+# Unix/Mac: bash run_ui.sh
 ```
 
-Then open your browser to `http://localhost:8501` and you'll see:
-- 📋 List of all available agents
-- 💬 Chat mode with conversation history
-- 🎯 Single execution for testing queries
-- 📊 Agent metadata and configuration viewer
-- ➕ Agent creation form with AI assistance
-- 📤 Code export functionality
-- 🔍 Execution details and session info
+Open `http://localhost:8501` to:
+- Browse and test pre-configured agents
+- Chat with agents (conversation history maintained)
+- Create new agents with AI-assisted form
+- Build MCP servers from your tools
+- Export agents as standalone Python code
 
-### Option 2: Python Code
+### Python Code
 
 ```python
 import asyncio
 from agent_def import AgentManager
 
 async def main():
-    # Create agent from config file
-    agent = AgentManager("configs/template_agent.json")
-    
-    # Initialize the agent
+    # Create agent from config
+    agent = AgentManager("configs/01_basic_template_agent.json")
     await agent.initialize()
     
-    # Send a message and get response
+    # Send messages
     response = await agent.send_message("Hello! How can you help me?")
     print(response)
     
     # Cleanup
     await agent.close()
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())
 ```
 
-### Running the Examples
-
-The project includes example scripts demonstrating different use cases:
+### Example Scripts
 
 ```bash
-# Run the basic agent example
-python agent_def/agent.py
-
-# Run comprehensive examples
-python example_usage.py
+python example_usage.py                # Basic agent usage
+python example_structured_output.py    # JSON schema examples
+python example_mcp_usage.py            # MCP server examples
+python example_mcp_integration.py      # Agent + MCP integration
 ```
 
-## Configuration
+## Core Concepts
 
-Agents are configured using JSON or YAML files stored in the `configs/` directory.
+### Agent Configuration
 
-### Example Configuration (`configs/template_agent.json`)
+Agents are defined in JSON files stored in `configs/`. Basic structure:
 
 ```json
 {
-  "app_name": "template_agent",
+  "app_name": "my_agent",
   "agent_type": "llm",
   "agent": {
-    "name": "template_agent",
+    "name": "my_agent",
     "model": "gemini-2.5-flash",
-    "description": "The template agent is a template for creating new agents.",
-    "instruction": "You are a template agent. You are used to create new agents."
+    "description": "Brief description of what this agent does",
+    "instruction": "You are an expert assistant. Help users with..."
   },
-  "tools": []
+  "tools": ["calculator", "WebSearchTool"],
+  "sub_agents": ["specialist_agent"],
+  "mcp_servers": [{"config": "calculator_server"}],
+  "example_queries": ["What can you help me with?"]
 }
 ```
 
-### Configuration Fields
+**Key Fields:**
+- **app_name**: Unique identifier for the agent
+- **agent_type**: `"llm"` (intelligent) or `"sequential"` (workflow pipeline)
+- **agent.name**: Display name (must be valid Python identifier)
+- **agent.model**: AI model (e.g., "gemini-2.5-flash", "gemini-2.5-pro")
+- **agent.instruction**: System prompt defining behavior (required for LLM agents)
+- **agent.response_schema**: JSON schema for structured output (optional)
+- **agent.output_key**: State variable name for sequential workflows (optional)
+- **tools**: Array of tool names from `tools/` directory (optional)
+- **sub_agents**: Array of sub-agent config names (optional)
+- **mcp_servers**: Array of MCP server connections (optional)
+- **example_queries**: Array of sample queries for UI display (optional)
 
-- **app_name**: Unique identifier for the application/agent
-- **agent_type**: Type of agent - `"llm"` (default, intelligent) or `"sequential"` (workflow)
-- **agent.name**: Display name for the agent
-- **agent.model**: The AI model to use (e.g., "gemini-2.5-flash") - required for LLM agents
-- **agent.description**: Brief description of the agent's purpose
-- **agent.instruction**: System instructions that define the agent's behavior - required for LLM agents
-- **agent.response_schema**: JSON schema defining structured output format (optional, see Structured Output section)
-- **agent.output_key**: Key name for storing output in shared state (optional, for sequential workflows)
-- **tools**: List of tool names to load (optional, see Tools section below)
-- **sub_agents**: List of sub-agent names (optional for LLM agents, required for sequential)
+### Tools
 
-## Tools
+Tools extend agent capabilities. Two types are supported:
 
-Agents can be enhanced with tools to perform specific actions like calculations, web searches, database queries, and more.
-
-### Tool Types
-
-The system supports two types of tools:
-
-1. **Function-based tools**: Simple async functions for stateless operations
-2. **Class-based tools**: Classes inheriting from `BaseTool` for complex operations with state
-
-### Using Tools
-
-To enable tools for an agent, add them to the `tools` array in your config:
-
-```json
-{
-  "app_name": "assistant_with_tools",
-  "agent_type": "llm",
-  "agent": {
-    "name": "helpful_assistant",
-    "model": "gemini-2.5-flash",
-    "description": "An assistant with calculator and search capabilities",
-    "instruction": "You are a helpful assistant. Use tools when appropriate."
-  },
-  "tools": [
-    "calculator",
-    "WebSearchTool"
-  ]
-}
-```
-
-### Built-in Tools
-
-#### `calculator` (Function-based)
-- **Purpose**: Evaluate mathematical expressions safely
-- **Example**: `calculator(expression="2 + 2 * 5")`
-- **Config**: None needed
-
-#### `WebSearchTool` (Class-based)
-- **Purpose**: Search the web for current information
-- **Parameters**: 
-  - `query` (required): Search query string
-  - `num_results` (optional): Number of results (1-10, default: 3)
-- **Environment Variables**:
-  - `SEARCH_API_KEY`: API key for search service (optional for demo mode)
-  - `SEARCH_ENGINE`: Search engine to use (default: "demo")
-
-### Creating Custom Tools
-
-#### Simple Function Tool
-
-Create a file in `tools/` directory:
-
+**Function-based tools** (simple, stateless):
 ```python
 # tools/my_tool.py
-async def my_tool(param1: str, param2: int) -> str:
-    """
-    Brief description of what the tool does.
-    
-    Args:
-        param1: Description of first parameter
-        param2: Description of second parameter
-    
-    Returns:
-        Result as a string
-    """
-    # Your tool logic here
-    return f"Processed {param1} with {param2}"
+async def my_tool(param: str) -> str:
+    """Tool description."""
+    return f"Processed: {param}"
 ```
 
-Then add `"my_tool"` to the `tools` array in your config.
-
-#### Complex Class-Based Tool
-
+**Class-based tools** (with state, setup/teardown):
 ```python
 # tools/my_advanced_tool.py
-import os
 from agent_def.base_tool import BaseTool, ToolParameter
 
 class MyAdvancedTool(BaseTool):
-    """Tool with state management and validation."""
-    
     @property
     def name(self) -> str:
         return "my_advanced_tool"
     
     @property
     def description(self) -> str:
-        return "Description of what this tool does"
+        return "What this tool does"
     
     @property
     def parameters(self) -> list[ToolParameter]:
         return [
-            ToolParameter(
-                name="input_text",
-                type="string",
-                description="Text to process",
-                required=True
-            ),
-            ToolParameter(
-                name="option",
-                type="string",
-                description="Processing option",
-                required=False,
-                default="default"
-            )
+            ToolParameter(name="input", type="string", required=True)
         ]
     
-    def _setup(self):
-        """Load config from environment variables."""
-        self.api_key = os.getenv("MY_API_KEY")
-        print("MyAdvancedTool initialized")
-    
     async def execute(self, **kwargs) -> str:
-        """Execute the tool."""
         params = self.validate_parameters(**kwargs)
-        # Your tool logic here
-        return f"Processed: {params['input_text']}"
-    
-    def _teardown(self):
-        """Cleanup resources."""
-        print("MyAdvancedTool cleaned up")
+        return f"Result: {params['input']}"
 ```
 
-Then add `"MyAdvancedTool"` to the `tools` array in your config.
+**Using Tools:**
+Add tool names to agent config's `tools` array. Configure via environment variables in `.env`:
 
-### Tool Naming Convention
-
-- **Function tools**: Use lowercase with underscores (e.g., `calculator`, `send_email`)
-  - File: `tools/calculator.py` → Function: `calculator()`
-- **Class tools**: Use PascalCase (e.g., `WebSearchTool`, `DatabaseQueryTool`)
-  - File: `tools/web_search_tool.py` → Class: `WebSearchTool`
-
-### Tool Configuration
-
-Tools get all configuration from environment variables, not from the config file. Set environment variables in your `.env` file:
-
-```bash
-# .env
-SEARCH_API_KEY=your_api_key_here
-SEARCH_ENGINE=google
-DATABASE_URL=postgresql://localhost/mydb
+```env
+SEARCH_API_KEY=your_api_key
+DATABASE_URL=postgresql://localhost/db
 ```
 
-## Sub-Agents
+### Sub-Agents
 
-Sub-agents allow you to create hierarchical agent systems where a coordinator agent delegates specific tasks to specialized sub-agents. This is powerful for:
-- **Specialization**: Each sub-agent focuses on a specific domain
-- **Modularity**: Sub-agents can be reused across different coordinator agents
-- **Scalability**: Complex tasks can be broken down and distributed
-
-### How Sub-Agents Work
-
-- Sub-agents share the same session as their parent agent
-- They can have their own tools and even their own sub-agents (nested hierarchy)
-- The coordinator agent decides when to delegate to a sub-agent
-- Sub-agents are referenced by name in the config
-
-### Using Sub-Agents
-
-To create an agent hierarchy, add a `sub_agents` array to your config:
+Create hierarchical agent systems where coordinators delegate to specialists:
 
 ```json
 {
-  "app_name": "coordinator_agent",
-  "agent_type": "llm",
   "agent": {
-    "name": "coordinator_agent",
-    "model": "gemini-2.5-flash",
-    "description": "Main coordinator that delegates to specialists",
-    "instruction": "You coordinate a team. Delegate greetings to 'greeting_agent' and farewells to 'farewell_agent'. Handle other requests yourself."
+    "name": "coordinator",
+    "instruction": "Delegate greetings to greeting_agent, farewells to farewell_agent"
   },
   "tools": ["get_weather"],
-  "sub_agents": [
-    "greeting_agent",
-    "farewell_agent"
-  ]
+  "sub_agents": ["greeting_agent", "farewell_agent"]
 }
 ```
 
-### Creating Sub-Agent Configs
+Sub-agents:
+- Share the parent's session (conversation history)
+- Can have their own tools and sub-agents (nested hierarchies)
+- Are loaded automatically from `configs/{agent_name}.json`
 
-Sub-agents have their own config files in the `configs/` directory:
+### Sequential Workflows
 
-**configs/greeting_agent.json:**
-```json
-{
-  "app_name": "greeting_specialist",
-  "agent_type": "llm",
-  "agent": {
-    "name": "greeting_agent",
-    "model": "gemini-2.5-flash",
-    "description": "Handles greetings and welcome messages",
-    "instruction": "You specialize in friendly greetings. Respond warmly to 'Hi', 'Hello', etc."
-  }
-}
-```
-
-**configs/farewell_agent.json:**
-```json
-{
-  "app_name": "farewell_specialist",
-  "agent_type": "llm",
-  "agent": {
-    "name": "farewell_agent",
-    "model": "gemini-2.5-flash",
-    "description": "Handles farewells and goodbye messages",
-    "instruction": "You specialize in farewells. Respond kindly to 'Bye', 'Goodbye', etc."
-  }
-}
-```
-
-### Example: Coordinator with Sub-Agents
-
-```python
-from agent_def import AgentManager
-
-# Create coordinator agent (automatically loads sub-agents)
-coordinator = AgentManager("configs/coordinator_agent.json")
-await coordinator.initialize()
-
-# Greetings are delegated to greeting_agent
-response = await coordinator.send_message("Hello!")
-# -> "Hi there! Glad to greet you!"
-
-# Weather queries use the coordinator's own tool
-response = await coordinator.send_message("What's the weather in London?")
-# -> "The weather in London is Cloudy, 15°C..."
-
-# Farewells are delegated to farewell_agent
-response = await coordinator.send_message("Goodbye!")
-# -> "Goodbye! Take care and have a wonderful day!"
-```
-
-### Nested Sub-Agents
-
-Sub-agents can have their own sub-agents, creating multi-level hierarchies:
+For fixed pipelines where agents run in order:
 
 ```json
 {
-  "agent_type": "llm",
-  "agent": {
-    "name": "executive_agent",
-    "model": "gemini-2.5-flash",
-    "description": "Executive level coordinator",
-    "instruction": "Delegate tasks to manager_agent..."
-  },
-  "sub_agents": ["manager_agent"]
-}
-```
-
-```json
-{
-  "agent_type": "llm",
-  "agent": {
-    "name": "manager_agent",
-    "model": "gemini-2.5-flash",
-    "description": "Middle management coordinator",
-    "instruction": "Delegate work to worker agents..."
-  },
-  "sub_agents": ["worker_agent_1", "worker_agent_2"]
-}
-```
-
-### Sub-Agent Naming Convention
-
-Sub-agent config files should be named: `{agent_name}.json`
-
-If your sub-agent is named `greeting_agent`, the config should be at `configs/greeting_agent.json`.
-
-### Best Practices
-
-1. **Clear Instructions**: Tell the coordinator agent exactly when to delegate to each sub-agent
-2. **Focused Sub-Agents**: Each sub-agent should have a specific, well-defined purpose
-3. **Tool Distribution**: Give tools to the agent that will use them most
-4. **Session Sharing**: Remember that sub-agents share the session, so they have access to conversation history
-
-## Sequential Agents (Workflows)
-
-In addition to LLM-based agents that use intelligence to decide what to do, the system supports **SequentialAgents** for workflow-oriented pipelines where sub-agents run in a predefined order.
-
-### LLM Agent vs Sequential Agent
-
-| Feature | LLM Agent (default) | Sequential Agent |
-|---------|-------------------|------------------|
-| Decision Making | LLM decides when to delegate | Runs sub-agents in order |
-| Use Case | Dynamic, intelligent routing | Fixed workflows, pipelines |
-| Sub-Agents | Optional, delegated as needed | Required, runs all in sequence |
-| Tools | Can have tools | Typically no tools (orchestration only) |
-| Instructions | Needs detailed instructions | No instructions needed |
-
-### Creating a Sequential Agent
-
-Sequential agents are perfect for pipelines like code review workflows, data processing chains, or multi-step analysis.
-
-**Example: Code Pipeline**
-
-```json
-{
-  "app_name": "code_pipeline",
   "agent_type": "sequential",
   "agent": {
     "name": "CodePipelineAgent",
-    "description": "Executes a sequence of code writing, reviewing, and refactoring."
+    "description": "Write → Review → Refactor pipeline"
   },
   "sub_agents": [
     "code_writer_agent",
-    "code_reviewer_agent_sequential",
+    "code_reviewer_agent",
     "code_refactorer_agent"
   ]
 }
 ```
 
-**Sub-Agent Configs:**
+**State Passing:** Use `output_key` to pass data between pipeline steps:
 
 ```json
-// configs/code_writer_agent.json
+// Step 1: Writer
 {
-  "app_name": "code_writer",
-  "agent_type": "llm",
   "agent": {
     "name": "code_writer_agent",
-    "model": "gemini-2.5-flash",
-    "description": "Writes code based on requirements",
-    "instruction": "Write clean code. Output ONLY the code.",
+    "instruction": "Write code based on requirements",
     "output_key": "generated_code"
   }
 }
 
-// configs/code_reviewer_agent_sequential.json
+// Step 2: Reviewer (uses {generated_code})
 {
-  "app_name": "code_reviewer_sequential",
-  "agent_type": "llm",
   "agent": {
     "name": "code_reviewer_agent",
-    "model": "gemini-2.5-flash",
-    "description": "Reviews code and provides feedback",
-    "instruction": "Review this code:\n```python\n{generated_code}\n```\nProvide feedback.",
+    "instruction": "Review:\n```\n{generated_code}\n```\nProvide feedback",
     "output_key": "review_comments"
   }
 }
 
-// configs/code_refactorer_agent.json
+// Step 3: Refactorer (uses {generated_code} and {review_comments})
 {
-  "app_name": "code_refactorer",
-  "agent_type": "llm",
   "agent": {
     "name": "code_refactorer_agent",
-    "model": "gemini-2.5-flash",
-    "description": "Refactors code based on review feedback",
-    "instruction": "Original:\n{generated_code}\nReview:\n{review_comments}\nRefactor it.",
+    "instruction": "Original: {generated_code}\nReview: {review_comments}\nRefactor it",
     "output_key": "refactored_code"
   }
 }
 ```
 
-### Using a Sequential Agent
+### Structured Output
 
-```python
-from agent_def import AgentManager
-
-# Create sequential pipeline
-pipeline = AgentManager("configs/code_pipeline_agent.json")
-await pipeline.initialize()
-
-# Send a request - it flows through all agents in order
-response = await pipeline.send_message("""
-Write a Python function to calculate factorial.
-It should handle edge cases and be efficient.
-""")
-
-# Output will be the result after going through:
-# 1. code_writer_agent (writes initial code)
-# 2. code_reviewer_agent_sequential (reviews it)
-# 3. code_refactorer_agent (refactors based on feedback)
-```
-
-### When to Use Sequential Agents
-
-✅ **Use Sequential Agents for:**
-- Fixed workflows (code review, data pipelines)
-- Multi-step processing where order matters
-- Quality assurance chains (generate → review → improve)
-- Document processing pipelines (extract → analyze → summarize)
-
-❌ **Use LLM Agents (default) for:**
-- Dynamic decision-making
-- Task routing based on content
-- Flexible delegation
-- General-purpose assistants
-
-### State Passing Between Agents
-
-In sequential workflows, agents often need to pass data to each other. This is done using `output_key` and state variable injection:
-
-**How it works:**
-1. **Agent 1** generates output → stores in state with `output_key`
-2. **Agent 2** references that output in its instruction using `{output_key}`
-3. **Agent 3** can reference outputs from both previous agents
-
-**Example with State Passing:**
-
-```json
-// Step 1: Writer generates code
-{
-  "agent": {
-    "name": "code_writer_agent",
-    "instruction": "Write clean code based on requirements. Output ONLY the code.",
-    "output_key": "generated_code"
-  }
-}
-
-// Step 2: Reviewer reads generated_code from state
-{
-  "agent": {
-    "name": "code_reviewer_agent",
-    "instruction": "Review this code:\n```python\n{generated_code}\n```\nProvide feedback.",
-    "output_key": "review_comments"
-  }
-}
-
-// Step 3: Refactorer reads both generated_code and review_comments
-{
-  "agent": {
-    "name": "code_refactorer_agent",
-    "instruction": "Original Code:\n{generated_code}\nReview:\n{review_comments}\nRefactor the code.",
-    "output_key": "refactored_code"
-  }
-}
-```
-
-**Key Points:**
-- Use `{variable_name}` in instructions to inject state variables
-- Each agent's `output_key` becomes available to subsequent agents
-- State is shared across all agents in the pipeline
-- Variables are automatically injected before the agent processes the request
-
-### Configuration Fields for Sequential Agents
-
-- **agent_type**: Must be set to `"sequential"`
-- **agent.name**: Name of the pipeline
-- **agent.description**: What the pipeline does
-- **sub_agents**: Array of sub-agent names (required, runs in order)
-- **agent.model**: Not used (sub-agents have their own models)
-- **agent.instruction**: Not needed (it's just orchestration)
-- **tools**: Typically not used (sub-agents can have tools)
-
-### Configuration Fields for Sub-Agents in Sequential Pipelines
-
-- **agent.name**: Name of the agent step
-- **agent.model**: Model to use for this step
-- **agent.description**: What this step does
-- **agent.instruction**: Instructions with `{state_variable}` placeholders for dynamic content
-- **agent.output_key**: (Optional) Key name to store this agent's output in shared state
-- **tools**: (Optional) Tools this agent can use
-
-## Structured Output (JSON Schemas)
-
-For production applications, you often need agents to return data in a consistent, parseable format rather than free-form text. The agent template supports **structured JSON output** through response schemas.
-
-### Why Use Structured Output?
-
-- ✅ **Consistent Format**: Always get data in the expected structure
-- ✅ **Type Safety**: Define types for each field (string, number, array, etc.)
-- ✅ **Easy Integration**: Directly use response data in your application without parsing
-- ✅ **Validation**: Ensure required fields are present
-- ✅ **Documentation**: Schema serves as API documentation
-
-### Configuration
-
-Add a `response_schema` field to your agent configuration:
+Define JSON schemas for consistent, parseable responses:
 
 ```json
 {
-  "app_name": "product_analyzer",
-  "agent_type": "llm",
   "agent": {
     "name": "product_analyzer",
-    "model": "gemini-2.0-flash-exp",
-    "description": "Analyzes products and returns structured data",
-    "instruction": "Extract key information from product descriptions.",
+    "instruction": "Extract product information",
     "response_schema": {
       "type": "object",
       "properties": {
         "product_name": {
           "type": "string",
-          "description": "Name of the product"
+          "description": "Product name"
         },
         "category": {
           "type": "string",
@@ -620,12 +302,12 @@ Add a `response_schema` field to your agent configuration:
         },
         "key_features": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "List of key features"
+          "items": {"type": "string"},
+          "description": "List of features"
         },
         "price_range": {
           "type": "string",
-          "description": "Price range (budget/mid-range/premium)"
+          "enum": ["budget", "mid-range", "premium"]
         }
       },
       "required": ["product_name", "category"]
@@ -634,370 +316,32 @@ Add a `response_schema` field to your agent configuration:
 }
 ```
 
-### Usage in Code
-
-When an agent has a `response_schema`, responses are automatically parsed as JSON:
-
-```python
-# Agent with response_schema automatically returns dict
-agent = AgentManager("configs/product_analyzer_agent.json")
-await agent.initialize()
-
-response = await agent.send_message("Analyze: iPhone 15 Pro Max...")
-
-# Response is a Python dict, not a string!
-print(response["product_name"])  # "iPhone 15 Pro Max"
-print(response["category"])      # "Electronics"
-print(response["key_features"])  # ["A17 Pro chip", "Titanium design", ...]
-
-# You can also explicitly request JSON parsing
-response = await agent.send_message("...", return_json=True)
-```
-
-### UI Display
-
-The Streamlit UI automatically detects structured output and displays it beautifully:
-
-- 📊 **JSON viewer**: Collapsible, syntax-highlighted JSON display
-- 📋 **Schema viewer**: View the response schema in agent details
-- ✅ **Status indicator**: Shows "Structured JSON Output" badge
-- 📥 **JSON downloads**: Download responses as `.json` files
-
-### Schema Fields
-
-The `response_schema` follows JSON Schema format:
-
-- **type**: Data type (object, string, number, boolean, array)
-- **properties**: Fields in an object
-- **items**: Type of array elements
-- **required**: Array of required field names
-- **enum**: Allowed values for a field
-- **description**: Field documentation (helps the AI understand)
-
-### Example: Task Breakdown Agent
-
-```json
-{
-  "response_schema": {
-    "type": "object",
-    "properties": {
-      "project_title": { "type": "string" },
-      "tasks": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "task_id": { "type": "integer" },
-            "title": { "type": "string" },
-            "priority": {
-              "type": "string",
-              "enum": ["high", "medium", "low"]
-            },
-            "estimated_time": { "type": "string" }
-          },
-          "required": ["task_id", "title", "priority"]
-        }
-      }
-    },
-    "required": ["project_title", "tasks"]
-  }
-}
-```
-
 **Usage:**
-
 ```python
-agent = AgentManager("configs/task_breakdown_agent.json")
+agent = AgentManager("configs/10_structured_product_analyzer_agent.json")
 await agent.initialize()
 
-response = await agent.send_message("Build a mobile app for fitness tracking")
+response = await agent.send_message("Analyze: iPhone 15 Pro...")
 
-# Access structured data
-print(f"Project: {response['project_title']}")
-for task in response['tasks']:
-    print(f"  [{task['priority']}] {task['title']} - {task['estimated_time']}")
+# Response is a Python dict, not a string
+print(response["product_name"])      # "iPhone 15 Pro"
+print(response["category"])          # "Electronics"
+print(response["key_features"])      # ["A17 Pro chip", ...]
 ```
 
-### Example Agents
+### MCP Integration
 
-The template includes example agents with structured output:
+Connect agents to Model Context Protocol servers for distributed tool access.
 
-- **`product_analyzer_agent`**: Extracts product information
-- **`task_breakdown_agent`**: Breaks down projects into tasks
-
-Run examples:
-```bash
-python example_structured_output.py
-```
-
-### Tips
-
-1. **Clear descriptions**: Help the AI by providing good field descriptions
-2. **Required fields**: Mark essential fields as required
-3. **Enums for categories**: Use enum for fields with limited options
-4. **Nested objects**: You can nest objects and arrays for complex structures
-5. **Model compatibility**: Works best with `gemini-2.0-flash-exp` or newer models
-
-## Creating a New Agent
-
-1. Create a new JSON configuration file in `configs/`:
-
-```json
-{
-  "app_name": "my_custom_agent",
-  "agent_type": "llm",
-  "agent": {
-    "name": "my_custom_agent",
-    "model": "gemini-2.5-flash",
-    "description": "A specialized agent for specific tasks.",
-    "instruction": "You are an expert in [domain]. Help users with [specific tasks]."
-  },
-  "tools": []
-}
-```
-
-2. Use the agent in your code:
-
-```python
-agent = AgentManager("configs/my_custom_agent.json")
-await agent.initialize()
-response = await agent.send_message("Your query here")
-```
-
-## Multiple Agents
-
-You can run multiple agents simultaneously, each with its own configuration and session:
-
-```python
-agent1 = AgentManager("configs/template_agent.json")
-agent2 = AgentManager("configs/code_reviewer_agent.json")
-
-await agent1.initialize()
-await agent2.initialize()
-
-response1 = await agent1.send_message("Create a new agent")
-response2 = await agent2.send_message("Review this code...")
-```
-
-## Web UI
-
-ADK Agent Manager includes an interactive web interface built with Streamlit for easy testing and visualization.
-
-### Features
-
-- **Agent Selection**: Browse and select from all available agent configurations
-- **Metadata Display**: View agent details including:
-  - Agent type (LLM or Sequential)
-  - Model information
-  - Tools and sub-agents
-  - Instructions and descriptions
-  - Output keys (for sequential workflows)
-  - Structured output schemas
-- **Chat Mode**: Maintain conversation context across multiple messages
-- **Interactive Execution**: Test agents with custom queries
-- **Real-Time Results**: See agent responses instantly (text or structured JSON)
-- **Execution Details**: View session IDs, user IDs, and execution metadata
-- **Example Queries**: Pre-filled examples for each agent type
-- **Download Results**: Save agent responses to file
-- **Agent Creation**: Build new agent configurations with an intuitive form
-  - Interactive schema builder for structured output
-  - Real-time validation and filename preview
-  - Automatic space-to-underscore conversion for valid identifiers
-- **AI-Powered Prompt Generation**: Auto-generate agent instructions using AI
-  - Uses dedicated helper agent (`helper_prompt_generator_agent`)
-  - Generates instructions based on agent name and description
-  - Instant form population with generated content
-- **Code Export**: Generate standalone Python code for any agent to use without the AgentManager
-  - Production-ready code with all dependencies
-  - Proper async/await implementation
-  - Environment variable handling
-
-### Using the Web UI
-
-1. **Start the UI:**
-```bash
-# Windows
-run_ui.bat
-
-# Unix/Mac  
-bash run_ui.sh
-
-# Or use streamlit directly
-streamlit run app.py
-```
-
-2. **Select an Agent:**
-   - Use the dropdown in the sidebar to choose an agent
-   - View its metadata in the "Agent Details" tab
-
-3. **Chat with an Agent:**
-   - Use the "Chat Mode" tab for interactive conversations
-   - Click "Start Chat Session" to begin
-   - Chat history is maintained throughout the session
-   - Type your messages in the chat input box
-   - View conversation history in the chat interface
-   - Use "New Chat" to reset and start fresh
-   - Use "Clear History" to remove all messages
-   - "Check ADK Session History" button for debugging conversation state
-
-4. **Execute Single Queries:**
-   - Switch to the "Single Execution" tab
-   - Enter your query in the text area
-   - Click "Execute" to run
-   - View the response (text or structured JSON)
-   - Download results as needed
-
-5. **Create New Agents:**
-   - Navigate to the "Create Agent" tab (far right)
-   - **Enable Structured Output** (optional): Check the box before filling the form to define JSON schemas
-   - Fill in the form with agent details:
-     - **App Name**: Unique identifier (spaces auto-converted to underscores)
-     - **Agent Name**: Display name (spaces auto-converted to underscores)
-     - **Agent Type**: Choose LLM (intelligent) or Sequential (workflow)
-     - **Model**: Select Gemini 2.5 Flash or Pro
-     - **Description**: What the agent does
-     - **Instructions**: System prompt defining behavior
-   - **AI Prompt Generation**: 
-     - Fill in Agent Name and Description
-     - Click "✨ Generate with AI" below the Instructions field
-     - AI generates comprehensive instructions automatically
-     - Instructions populate the form immediately
-   - **Structured Output Schema Builder** (if enabled):
-     - Define number of output fields
-     - For each field specify: name, type, description, required status
-     - Support for strings, integers, numbers, booleans, arrays
-     - Add enums for restricted string values
-   - **Select Tools and Sub-Agents** as needed
-   - **Preview** or **Save** the configuration
-   - Click "Reload UI" to see your new agent in the selector
-
-6. **Export Agent Code:**
-   - Go to the "Agent Details" tab
-   - Click "📤 Generate Code"
-   - View the generated standalone Python code
-   - Download the code as a `.py` file
-   - Use the code in other projects without the AgentManager
-   - The exported code includes:
-     - All agent configuration (model, instructions, etc.)
-     - Correct imports (google-adk, Runner, types, dotenv)
-     - Environment variable loading (for API keys)
-     - Tool imports with proper snake_case filenames
-     - Class-based tool instantiation and execute method extraction
-     - Structured output schemas as Pydantic models (if defined)
-     - Complete usage example with async/await
-     - Proper session and runner setup
-     - Ready-to-run implementation
-   - Prerequisites listed in code comments:
-     - GOOGLE_API_KEY in .env file
-     - Required Python packages
-     - Tool files (if using tools)
-
-7. **Tips:**
-   - Check the "Example Queries" in the sidebar for ideas
-   - Use the "Agent Details" tab to understand what the agent can do
-   - Download responses for later reference
-   - View raw configuration to see the full agent setup
-   - Use AI generation to quickly create high-quality agent instructions
-   - Export agents as code to use them in production applications
-
-### UI Layout
-
-The web interface features a modern, intuitive design with:
-
-**Sidebar:**
-- Agent selector dropdown
-- Example queries for the selected agent
-- Visual feedback on agent type and features
-
-**Main Tabs:**
-- **💬 Chat Mode**: Interactive conversation interface with persistent history
-- **🎯 Single Execution**: One-time query testing with immediate results
-- **📊 Agent Details**: View configuration, metadata, and export code
-- **🔌 MCP Servers**: Create and manage Model Context Protocol servers
-- **➕ Create Agent**: Form-based agent creation with AI assistance (separated on far right)
-
-**Agent Details Tab Features:**
-- Configuration overview with info icon
-- Agent type, model, and capabilities
-- Tools and sub-agents list
-- Instructions and description
-- Structured output schema viewer (if configured)
-- Code export section with download
-- Raw JSON configuration expander
-
-**Create Agent Tab Features:**
-- Structured form with validation
-- Real-time filename preview
-- AI prompt generation button
-- Interactive schema builder
-- Tool and sub-agent selection
-- Preview and save options
-- Auto-reload functionality
-
-**MCP Servers Tab Features:**
-- Server configuration viewer with transport details
-- Tool list showing function/class types
-- Initialize server button for testing
-- Export config for Claude Desktop/Cursor integration
-- Create new MCP server form with:
-  - Transport protocol selection (stdio, http, sse)
-  - Dynamic port/host configuration based on transport
-  - Tool selection with auto-detection of function vs class types
-  - Config preview and validation
-- Usage instructions for running servers
-
-## MCP Server Management
-
-Model Context Protocol (MCP) servers allow your agents to expose tools to other applications like Claude Desktop. ADK Agent Manager provides a complete system for creating and managing MCP servers with dynamic tool loading.
-
-### What is MCP?
-
-MCP (Model Context Protocol) is a standard for exposing tools and resources to AI applications. By creating MCP servers, you can:
-- Make your tools available to Claude Desktop and other MCP-compatible applications
-- Create reusable tool servers that can be shared across projects
-- Standardize tool interfaces for better interoperability
-
-### Creating MCP Servers
-
-#### Via Web UI (Recommended)
-
-1. Navigate to the **🔌 MCP Servers** tab
-2. Click "Create New MCP Server"
-3. Fill in the form:
-   - **Server Name**: Human-readable name (e.g., "Calculator Server")
-   - **Config File Name**: Filename for the JSON config
-   - **Description**: What the server does
-   - **Transport**: Choose protocol (stdio for local, http/sse for network)
-   - **Tools**: Select tools to include from the tools/ directory
-4. Click "Preview Config" to review or "Create Server" to save
-
-#### Via Code
-
-```python
-from mcp_def.mcp_manager import MCPServerManager
-
-# Load server from config
-server = MCPServerManager("configs_mcp/01_calculator_server.json")
-
-# Initialize (loads all tools)
-server.initialize()
-
-# Start the server
-server.start_server()
-```
-
-### MCP Server Configuration
-
-Example config file (`configs_mcp/01_calculator_server.json`):
-
+**MCP Server Configuration** (`configs_mcp/calculator_server.json`):
 ```json
 {
   "server": {
-    "name": "Calculator MCP Server",
-    "description": "MCP server with calculator functionality",
-    "port": 8000,
+    "name": "Calculator Server",
+    "description": "MCP server with calculator tools",
+    "transport": "http",
     "host": "0.0.0.0",
-    "transport": "stdio"
+    "port": 8000
   },
   "tools": [
     {
@@ -1010,94 +354,17 @@ Example config file (`configs_mcp/01_calculator_server.json`):
 ```
 
 **Transport Options:**
-- `stdio`: Standard input/output - used for local integration with Claude Desktop, Cursor, etc.
-- `http`: HTTP with Server-Sent Events - for network access
-- `sse`: Alternative SSE transport
+- **stdio**: For Claude Desktop / IDE integration
+- **http**: For network access
+- **sse**: For streaming updates
 
-### Tool Types
-
-MCP servers support two types of tools:
-
-**Function-based tools** (simple, stateless):
+**Using MCP Servers in Agents:**
 ```json
 {
-  "file": "calculator.py",
-  "type": "function",
-  "function_name": "calculator"
-}
-```
-
-**Class-based tools** (with state, setup/teardown):
-```json
-{
-  "file": "web_search_tool.py",
-  "type": "class",
-  "class_name": "WebSearchTool"
-}
-```
-
-### Claude Desktop Integration
-
-To use your MCP server with Claude Desktop:
-
-1. In the **MCP Servers** tab, select your server
-2. Click "📥 Export for Claude"
-3. Copy the JSON configuration
-4. Add it to your Claude Desktop config file:
-   - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-Example Claude Desktop config:
-```json
-{
-  "mcpServers": {
-    "Calculator MCP Server": {
-      "command": "python",
-      "args": ["-m", "mcp_def.server_01_calculator_server"],
-      "description": "MCP server with calculator functionality"
-    }
-  }
-}
-```
-
-### Running MCP Servers
-
-**From command line:**
-```bash
-python example_mcp_usage.py
-```
-
-**In your code:**
-```python
-from mcp_def.mcp_manager import MCPServerManager
-
-server = MCPServerManager("configs_mcp/03_multi_tool_server.json")
-server.initialize()
-server.start_server()  # Blocks for stdio, background for http/sse
-```
-
-## Using MCP Servers with Agents
-
-ADK agents can seamlessly use tools from MCP servers alongside local Python tools. This allows you to:
-- Connect agents to remote tool servers
-- Auto-start MCP servers when initializing agents
-- Mix local tools with MCP server tools
-- Scale tool availability across multiple agents
-
-### Adding MCP Servers to Agent Configs
-
-Add the `mcp_servers` array to any agent configuration:
-
-```json
-{
-  "app_name": "my_agent",
-  "agent_type": "llm",
   "agent": {
-    "name": "My_Agent",
-    "model": "gemini-2.0-flash",
-    "instructions": "You are a helpful assistant."
+    "name": "mcp_agent",
+    "instruction": "You have access to calculator tools"
   },
-  "tools": ["calculator"],
   "mcp_servers": [
     {
       "config": "01_calculator_server",
@@ -1108,296 +375,258 @@ Add the `mcp_servers` array to any agent configuration:
 }
 ```
 
-### MCP Server Configuration Options
+**MCP Server Options:**
+- **config**: Reference to config file in `configs_mcp/` (without `.json`)
+- **url**: Direct URL to connect to (optional if in config file)
+- **auto_start**: Start server automatically when agent initializes (requires http/sse)
 
-Each MCP server entry supports three fields:
+**Connection Scenarios:**
+1. **Connect to running server**: Provide `url` only
+2. **Auto-start server**: Set `auto_start: true` with `config` (http/sse only)
+3. **Mixed tools**: Combine local `tools` array with `mcp_servers`
 
-**`config`** (optional): Reference to MCP server config file in `configs_mcp/` (without `.json` extension)
-```json
-{
-  "config": "01_calculator_server"
-}
-```
-
-**`url`** (optional): Direct URL to connect to running MCP server
-```json
-{
-  "url": "http://localhost:8000"
-}
-```
-
-**`auto_start`** (optional, default: false): Automatically start the server if it's not running
-```json
-{
-  "auto_start": true
-}
-```
-
-**Validation Rules**:
-- At least one of `config` or `url` must be provided
-- If only `config`: reads URL from config file or uses auto-start
-- If only `url`: connects to that URL directly (server must be running)
-- If both: uses provided URL, optionally auto-starts if needed
-- Auto-start requires `config` and HTTP/SSE transport (not stdio)
-
-### Connection Scenarios
-
-**Scenario 1: Connect to Running Server (by URL)**
-```json
-{
-  "mcp_servers": [
-    {
-      "url": "http://localhost:8000"
-    }
-  ]
-}
-```
-Agent connects to MCP server that's already running. Server must be started separately.
-
-**Scenario 2: Connect by Config Reference**
-```json
-{
-  "mcp_servers": [
-    {
-      "config": "01_calculator_server"
-    }
-  ]
-}
-```
-Agent reads URL from `configs_mcp/01_calculator_server.json` and connects. Server must be running.
-
-**Scenario 3: Auto-Start MCP Server**
-```json
-{
-  "mcp_servers": [
-    {
-      "config": "03_multi_tool_server",
-      "auto_start": true
-    }
-  ]
-}
-```
-Agent automatically starts the MCP server in background when initialized. Server stops when agent closes.
-- Requires HTTP or SSE transport in MCP config (stdio cannot be auto-started)
-- Server runs in background thread
-- Perfect for development and testing
-
-**Scenario 4: Mix Local and MCP Tools**
-```json
-{
-  "tools": ["calculator", "get_weather"],
-  "mcp_servers": [
-    {
-      "url": "http://remote-server:8001"
-    }
-  ]
-}
-```
-Agent has access to both local Python tools AND tools from MCP server.
-
-### Usage Examples
-
-**Basic MCP Agent**:
+**Example:**
 ```python
-import asyncio
-from agent_def import AgentManager
-
-async def main():
-    # Create agent that connects to MCP server
-    agent = AgentManager("configs/12_mcp_calculator_agent.json")
-    
-    # Initialize (connects to MCP servers)
-    await agent.initialize()
-    
-    # Use MCP tools transparently
-    response = await agent.send_message("Calculate 25 * 84")
-    print(response)
-    
-    # Cleanup
-    await agent.close()
-
-asyncio.run(main())
-```
-
-**Auto-Start MCP Server**:
-```python
-# Agent config with auto_start: true
+# Agent auto-starts MCP server and uses its tools
 agent = AgentManager("configs/14_mcp_auto_start_agent.json")
+await agent.initialize()  # Server starts in background
 
-# Initialize - automatically starts MCP server
-await agent.initialize()
+response = await agent.send_message("Calculate 123 * 456")
 
-# Use tools from auto-started server
-response = await agent.send_message("What's 100 divided by 5?")
-
-# Cleanup - automatically stops MCP server
-await agent.close()
+await agent.close()  # Server stops automatically
 ```
 
-**Mixed Tools Example**:
-```python
-# Agent with both local tools and MCP tools
-agent = AgentManager("configs/13_mcp_mixed_tools_agent.json")
-await agent.initialize()
+## Web UI Guide
 
-# Uses local calculator tool
-await agent.send_message("Calculate 456 + 789")
+The Streamlit interface provides a complete environment for agent development.
 
-# Uses MCP weather tool
-await agent.send_message("What's the weather in Tokyo?")
+### Main Tabs
 
-# Agent seamlessly chooses appropriate tool
-await agent.send_message("Calculate 50 * 3 and tell me the weather in Paris")
+**💬 Chat Mode**
+- Interactive conversations with agents
+- Persistent conversation history
+- Multi-turn context retention
+- "New Chat" and "Clear History" controls
+- Session state debugging tools
 
-await agent.close()
-```
+**🎯 Single Execution**
+- One-time query testing
+- Immediate results (text or JSON)
+- Download responses
+- Example queries sidebar
 
-### Running MCP Integration Examples
+**📊 Agent Details**
+- Configuration overview
+- Agent type, model, capabilities
+- Tools, sub-agents, and MCP servers list
+- Instructions and descriptions
+- Structured output schema viewer
+- Code export with download
+- Raw JSON configuration
 
-The project includes comprehensive examples:
+**🔌 MCP Servers**
+- Browse available MCP servers
+- View server configurations and tools
+- Initialize and test servers
+- Export config for Claude Desktop/Cursor
+- Usage instructions
 
-```bash
-python example_mcp_integration.py
-```
+**➕ Create Agent**
+- Interactive form for new agents
+- AI-powered instruction generation
+- Tool and sub-agent selection
+- MCP server integration
+- Structured output schema builder
+- Real-time validation
+- Preview and save
 
-This demonstrates:
-1. Agent with MCP server by URL
-2. Agent with auto-start MCP server
-3. Agent with mixed local + MCP tools
-4. Multi-turn chat with MCP tools
+**➕ Create MCP Server**
+- Build MCP servers from existing tools
+- Transport protocol selection (stdio/http/sse)
+- Tool selection with type detection
+- Configuration preview
+- Save and reload
 
-### Troubleshooting MCP Connections
+### Creating Agents via UI
 
-**Problem**: "Failed to connect to MCP server"
-- **Solution**: Ensure the MCP server is running at the specified URL
-- Check server logs for errors
-- Verify port is not blocked by firewall
+1. Navigate to **➕ Create Agent** tab
+2. Fill in basic information:
+   - App Name (unique identifier)
+   - Agent Type (LLM or Sequential)
+   - Model (Gemini 2.5 Flash/Pro)
+   - Description
+3. **Generate Instructions with AI** (optional):
+   - Enter name and description
+   - Click **✨ Generate with AI**
+   - AI populates the instructions field
+4. **Add Tools & Sub-Agents** (optional):
+   - Select from `tools/` directory
+   - Choose sub-agents from `configs/`
+5. **Connect MCP Servers** (optional):
+   - Select servers from `configs_mcp/`
+   - Configure URL and auto-start options
+6. **Add Example Queries** (optional):
+   - Define sample queries for testing
+7. **Enable Structured Output** (optional):
+   - Toggle schema builder
+   - Define output fields with types
+8. **Preview** or **Create** agent
+9. Click **Reload UI** to see new agent
 
-**Problem**: "Auto-start failed"
-- **Solution**: Ensure MCP server config uses `http` or `sse` transport (not `stdio`)
-- Check that port is not already in use
-- Verify config file exists in `configs_mcp/`
+### Creating MCP Servers via UI
 
-**Problem**: "Tools not available"
-- **Solution**: Check that MCP server has successfully loaded tools
-- Use "Initialize Server" button in UI to test server
-- Verify tool files exist in `tools/` directory
+1. Navigate to **➕ Create MCP Server** tab
+2. **Write Custom Function** (optional):
+   - Expand "Create New Function"
+   - Enter function name and description
+   - Click **✨ Generate with AI** for automatic code
+   - Edit generated code as needed
+   - Click **💾 Save Function**
+   - Click **🔄 Refresh Tools List**
+3. Configure server:
+   - Server Name
+   - Config File Name
+   - Description
+   - Transport protocol (stdio/http/sse)
+   - Host and Port (for http/sse)
+4. Select tools to include
+5. **Preview Config** or **Create Server**
 
-**Problem**: "Port conflicts"
-- **Solution**: Change port in MCP server config
-- Stop other services using the same port
-- Use different ports for multiple MCP servers
+### Exporting Agent Code
 
-### Best Practices
+1. Select an agent
+2. Go to **📊 Agent Details** tab
+3. Click **📤 Generate Code**
+4. View standalone Python code
+5. Download as `.py` file
 
-1. **Development**: Use auto-start for quick iteration
-2. **Production**: Run MCP servers separately, connect by URL
-3. **Multiple Agents**: Share one MCP server across many agents
-4. **Tool Organization**: Group related tools in dedicated MCP servers
-5. **Transport Selection**: 
-   - Use `stdio` for Claude Desktop/IDE integration
-   - Use `http` for agent-to-server communication
-   - Use `sse` for streaming/real-time updates
+The exported code includes:
+- All imports and dependencies
+- Tool imports with proper instantiation
+- Pydantic models for structured output
+- MCP toolset initialization (if used)
+- Session and runner setup
+- Complete usage example
+- Prerequisites in comments
 
 ## Project Structure
 
 ```
 adk-agent-manager/
 ├── agent_def/
-│   ├── __init__.py           # Exports AgentManager
-│   ├── agent.py              # AgentManager class implementation
-│   ├── base_tool.py          # BaseTool abstract class
-│   └── tool_loader.py        # Tool loading system
+│   ├── __init__.py              # Exports AgentManager
+│   ├── agent.py                 # AgentManager implementation
+│   ├── base_tool.py             # BaseTool abstract class
+│   ├── tool_loader.py           # Tool loading system
+│   ├── .env                     # Environment variables (create this)
+│   └── .env.example             # Environment template
 ├── mcp_def/
-│   ├── __init__.py           # MCP package init
-│   ├── mcp_manager.py        # MCPServerManager class implementation
-│   └── server.py             # Template standalone MCP server example
-├── configs/
-│   ├── 01_basic_template_agent.json      # Basic LLM agent
-│   ├── 02_tools_assistant_agent.json     # Agent with calculator & web search
-│   ├── 03_subagents_coordinator_agent.json # Coordinator with sub-agents
-│   ├── 04_subagents_greeting_agent.json  # Greeting specialist
-│   ├── 05_subagents_farewell_agent.json  # Farewell specialist
-│   ├── 06_sequential_code_pipeline_agent.json # Sequential workflow
-│   ├── 07_sequential_code_writer_agent.json   # Code writing step
-│   ├── 08_sequential_code_reviewer_agent.json # Code review step
-│   ├── 09_sequential_code_refactorer_agent.json # Code refactor step
-│   ├── 10_structured_product_analyzer_agent.json # JSON output example
-│   ├── 11_structured_task_breakdown_agent.json   # Task breakdown with schema
-│   ├── 12_mcp_calculator_agent.json     # Agent using MCP calculator server
-│   ├── 13_mcp_mixed_tools_agent.json    # Agent with local + MCP tools
-│   ├── 14_mcp_auto_start_agent.json     # Agent with auto-start MCP server
-│   ├── helper_prompt_generator_agent.json # AI prompt generation helper
-│   └── ...                              # Your custom agents
-├── configs_mcp/
-│   ├── 01_calculator_server.json        # Basic MCP server with calculator
-│   ├── 02_weather_server.json           # MCP server with weather tool
-│   ├── 03_multi_tool_server.json        # MCP server with multiple tools
-│   └── ...                              # Your custom MCP servers
-├── tools/
-│   ├── calculator.py         # Function-based tool
-│   ├── web_search_tool.py    # Class-based tool
-│   └── get_weather.py        # Weather tool
-├── app.py                    # Streamlit Web UI
-├── run_ui.bat                # Windows UI launcher
-├── run_ui.sh                 # Unix/Mac UI launcher
-├── example_usage.py          # Code examples (basic usage)
+│   ├── __init__.py              # MCP package init
+│   ├── mcp_manager.py           # MCPServerManager class
+│   └── server.py                # Standalone MCP server template
+├── configs/                     # Agent configurations
+│   ├── 01_basic_template_agent.json
+│   ├── 02_tools_assistant_agent.json
+│   ├── 03_subagents_coordinator_agent.json
+│   ├── 10_structured_product_analyzer_agent.json
+│   ├── 12_mcp_calculator_agent.json
+│   ├── helper_prompt_generator_agent.json
+│   └── ...
+├── configs_mcp/                 # MCP server configurations
+│   ├── 01_calculator_server.json
+│   ├── 02_weather_server.json
+│   ├── 03_multi_tool_server.json
+│   └── ...
+├── tools/                       # Tool implementations
+│   ├── calculator.py            # Function-based tool
+│   ├── web_search_tool.py       # Class-based tool
+│   ├── get_weather.py           # Weather tool
+│   └── ...
+├── app.py                       # Streamlit Web UI
+├── example_usage.py             # Basic usage examples
 ├── example_structured_output.py # Structured output examples
-├── example_mcp_usage.py      # MCP server usage examples
-├── example_mcp_integration.py # Agent + MCP integration examples
-├── requirements.txt          # Python dependencies
-├── .env                      # Environment variables (create with GOOGLE_API_KEY)
-└── README.md                 # This file
+├── example_mcp_usage.py         # MCP server examples
+├── example_mcp_integration.py   # Agent + MCP examples
+├── requirements.txt             # Python dependencies
+├── run_ui.bat                   # Windows UI launcher
+├── run_ui.sh                    # Unix/Mac UI launcher
+├── .gitignore                   # Git ignore rules
+└── README.md                    # This file
 ```
 
 ## API Reference
 
 ### AgentManager
 
-The main class for managing agent lifecycle.
-
-#### Methods
-
-**`__init__(config_path: str)`**
-- Initialize an agent manager with a configuration file
-- Generates unique user_id and session_id
-- Creates session service
+**`AgentManager(config_path: str)`**
+- Initialize agent manager with configuration file
+- Automatically generates unique user_id and session_id
 
 **`async initialize()`**
-- Create the agent from config
-- Set up the session
-- Create the runner
+- Create agent from config
+- Load tools and sub-agents
+- Connect to MCP servers
+- Set up session and runner
 - Must be called before sending messages
 
-**`async send_message(query: str) -> str`**
-- Send a message to the agent
-- Returns the agent's response as a string
+**`async send_message(query: str, return_json: bool = False) -> str | dict`**
+- Send message to agent
+- Returns string by default
+- Returns dict if `return_json=True` or agent has `response_schema`
+
+**`get_conversation_history() -> list[dict]`**
+- Get conversation history from session
+- Returns list of message dicts with `role` and `content`
 
 **`async close()`**
-- Cleanup resources (placeholder for future use)
+- Cleanup resources
+- Stop auto-started MCP servers
+- Close agent connections
+
+### MCPServerManager
+
+**`MCPServerManager(config_path: str)`**
+- Initialize MCP server manager with config file
+
+**`initialize()`**
+- Load and register all tools from config
+- Prepare server for start
+
+**`start_server()`**
+- Start MCP server (blocks for stdio, background for http/sse)
+
+**`stop_server()`**
+- Stop running server (for http/sse)
+
+**`get_config() -> dict`**
+- Get server configuration
+
+**`export_config_for_claude() -> dict`**
+- Export Claude Desktop compatible config
 
 ## Advanced Usage
 
 ### Multi-turn Conversations
 
-Agents maintain conversation history within the same session:
+Agents maintain conversation history within sessions:
 
 ```python
-agent = AgentManager("configs/template_agent.json")
+agent = AgentManager("configs/01_basic_template_agent.json")
 await agent.initialize()
 
-# First message
-response1 = await agent.send_message("I need help with project planning")
+# Context is preserved across messages
+await agent.send_message("My name is Alice")
+await agent.send_message("What's my name?")  # Agent remembers "Alice"
 
-# Follow-up message (agent remembers context)
-response2 = await agent.send_message("What about timeline estimation?")
-
-await agent.close()
+# Get full history
+history = agent.get_conversation_history()
+for msg in history:
+    print(f"{msg['role']}: {msg['content']}")
 ```
 
 ### Environment Variables
 
-You can use environment variables in your code by loading them with `python-dotenv`:
+Load configuration from `.env` using `python-dotenv`:
 
 ```python
 import os
@@ -1405,28 +634,71 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-api_key = os.getenv("API_KEY")
-model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+api_key = os.getenv("GOOGLE_API_KEY")
+project = os.getenv("GOOGLE_CLOUD_PROJECT")
+```
+
+### Claude Desktop Integration
+
+To use MCP servers with Claude Desktop:
+
+1. Create MCP server in UI or via config
+2. In **MCP Servers** tab, select server
+3. Click **📥 Export for Claude**
+4. Copy JSON configuration
+5. Add to Claude Desktop config:
+   - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "Calculator Server": {
+      "command": "python",
+      "args": ["-m", "mcp_def.mcp_manager", "configs_mcp/01_calculator_server.json"],
+      "description": "Calculator tools for Claude"
+    }
+  }
+}
 ```
 
 ## Troubleshooting
 
-### Module not found errors
-
-Make sure you've activated the virtual environment:
-
+**"Module not found" errors:**
 ```bash
-# Windows (PowerShell)
-.\venv\Scripts\Activate.ps1
-
-# Windows (CMD)
-.\venv\Scripts\activate.bat
-
-# Unix/MacOS
+# Ensure virtual environment is activated
+# Windows:
+venv\Scripts\activate
+# Unix/Mac:
 source venv/bin/activate
+
+# Reinstall dependencies
+pip install -r requirements.txt
 ```
+
+**"GOOGLE_API_KEY not found":**
+- Create `agent_def/.env` file
+- Add `GOOGLE_API_KEY=your_key_here`
+- Restart application
+
+**"Failed to connect to MCP server":**
+- Ensure MCP server is running at specified URL
+- Check firewall settings
+- Verify port is not in use
+- For auto-start: ensure http/sse transport (not stdio)
+
+**"Agent name validation error":**
+- Agent names must be valid Python identifiers
+- Use underscores instead of spaces
+- Start with letter or underscore
+- UI automatically converts spaces to underscores
+
+**"Tools not loading":**
+- Check tool files exist in `tools/` directory
+- Verify function/class names match config
+- For class tools, check inheritance from `BaseTool`
+- Review tool logs in console
 
 ## License
 
 MIT License - feel free to use this template for your own projects!
-
