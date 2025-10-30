@@ -1202,7 +1202,7 @@ def main():
             # Status placeholder that appears right below the button
             status_placeholder = st.empty()
             
-            st.markdown("### Tools & Sub-Agents")
+            st.markdown("### Tools & Sub-Agents (Optional)")
             
             col1, col2 = st.columns(2)
             
