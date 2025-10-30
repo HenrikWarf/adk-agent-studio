@@ -1,0 +1,27 @@
+{
+  "server": {
+    "name": "Multi-Tool MCP Server",
+    "description": "MCP server with multiple tools including calculator, weather, and web search",
+    "port": 8002,
+    "host": "0.0.0.0",
+    "transport": "http"
+  },
+  "tools": [
+    {
+      "file": "calculator.py",
+      "type": "function",
+      "function_name": "calculator"
+    },
+    {
+      "file": "get_weather.py",
+      "type": "function",
+      "function_name": "get_weather"
+    },
+    {
+      "file": "web_search_tool.py",
+      "type": "class",
+      "class_name": "WebSearchTool"
+    }
+  ]
+}
+

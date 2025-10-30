@@ -10,6 +10,12 @@
   "tools": [
     "calculator",
     "WebSearchTool"
+  ],
+  "example_queries": [
+    "What is 15 * 8 + 42?",
+    "Calculate the square root of 144",
+    "Search for the latest Python tutorials",
+    "What is 25% of 480?"
   ]
 }
 

@@ -41,6 +41,11 @@
       "required": ["product_name", "category", "key_features"]
     }
   },
-  "tools": []
+  "tools": [],
+  "example_queries": [
+    "Analyze this product: Track jacket in midweight scuba fabric with side stripes in woven fabric. Designed with a stand-up collar, two-way zip down the front, welt side pockets and ribbing at the cuffs and hem. Loose fit for a generous but not oversized silhouette.",
+    "Analyze this product: Wireless Bluetooth headphones with active noise cancellation, 30-hour battery life, and premium sound quality. Perfect for professionals and music enthusiasts.",
+    "Analyze this product: Organic green tea blend with jasmine and hints of citrus. Packed with antioxidants for a healthy lifestyle."
+  ]
 }
 

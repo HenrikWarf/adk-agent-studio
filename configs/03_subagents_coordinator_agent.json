@@ -13,6 +13,12 @@
   "sub_agents": [
     "04_subagents_greeting_agent",
     "05_subagents_farewell_agent"
+  ],
+  "example_queries": [
+    "Hello! How are you?",
+    "What's the weather in Tokyo?",
+    "Goodbye, see you later!",
+    "Tell me the weather forecast for London"
   ]
 }
 

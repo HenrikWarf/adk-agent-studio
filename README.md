@@ -1,4 +1,4 @@
-# ADK Agent Studio
+# ADK Agent Manager
 
 > A comprehensive development environment for Google ADK (Agent Development Kit)
 
@@ -16,6 +16,9 @@ Build, test, and deploy production-ready AI agents with an interactive UI, confi
 - **Tools System**: Support for both function-based and class-based tools
 - **Sub-Agents**: Hierarchical agent structures with delegation capabilities
 - **Sequential Workflows**: Multi-step pipelines with state passing between agents
+- **MCP Server Management**: Create and manage Model Context Protocol servers with dynamic tool loading
+- **MCP Agent Integration**: Connect agents to MCP servers with auto-start, URL, and mixed tool support
+- **Code Export**: Generate standalone Python code from agent and MCP server configurations
 
 ## Installation
 
@@ -778,7 +781,7 @@ response2 = await agent2.send_message("Review this code...")
 
 ## Web UI
 
-ADK Agent Studio includes an interactive web interface built with Streamlit for easy testing and visualization.
+ADK Agent Manager includes an interactive web interface built with Streamlit for easy testing and visualization.
 
 ### Features
 
@@ -910,6 +913,7 @@ The web interface features a modern, intuitive design with:
 - **💬 Chat Mode**: Interactive conversation interface with persistent history
 - **🎯 Single Execution**: One-time query testing with immediate results
 - **📊 Agent Details**: View configuration, metadata, and export code
+- **🔌 MCP Servers**: Create and manage Model Context Protocol servers
 - **➕ Create Agent**: Form-based agent creation with AI assistance (separated on far right)
 
 **Agent Details Tab Features:**
@@ -930,15 +934,384 @@ The web interface features a modern, intuitive design with:
 - Preview and save options
 - Auto-reload functionality
 
+**MCP Servers Tab Features:**
+- Server configuration viewer with transport details
+- Tool list showing function/class types
+- Initialize server button for testing
+- Export config for Claude Desktop/Cursor integration
+- Create new MCP server form with:
+  - Transport protocol selection (stdio, http, sse)
+  - Dynamic port/host configuration based on transport
+  - Tool selection with auto-detection of function vs class types
+  - Config preview and validation
+- Usage instructions for running servers
+
+## MCP Server Management
+
+Model Context Protocol (MCP) servers allow your agents to expose tools to other applications like Claude Desktop. ADK Agent Manager provides a complete system for creating and managing MCP servers with dynamic tool loading.
+
+### What is MCP?
+
+MCP (Model Context Protocol) is a standard for exposing tools and resources to AI applications. By creating MCP servers, you can:
+- Make your tools available to Claude Desktop and other MCP-compatible applications
+- Create reusable tool servers that can be shared across projects
+- Standardize tool interfaces for better interoperability
+
+### Creating MCP Servers
+
+#### Via Web UI (Recommended)
+
+1. Navigate to the **🔌 MCP Servers** tab
+2. Click "Create New MCP Server"
+3. Fill in the form:
+   - **Server Name**: Human-readable name (e.g., "Calculator Server")
+   - **Config File Name**: Filename for the JSON config
+   - **Description**: What the server does
+   - **Transport**: Choose protocol (stdio for local, http/sse for network)
+   - **Tools**: Select tools to include from the tools/ directory
+4. Click "Preview Config" to review or "Create Server" to save
+
+#### Via Code
+
+```python
+from mcp_def.mcp_manager import MCPServerManager
+
+# Load server from config
+server = MCPServerManager("configs_mcp/01_calculator_server.json")
+
+# Initialize (loads all tools)
+server.initialize()
+
+# Start the server
+server.start_server()
+```
+
+### MCP Server Configuration
+
+Example config file (`configs_mcp/01_calculator_server.json`):
+
+```json
+{
+  "server": {
+    "name": "Calculator MCP Server",
+    "description": "MCP server with calculator functionality",
+    "port": 8000,
+    "host": "0.0.0.0",
+    "transport": "stdio"
+  },
+  "tools": [
+    {
+      "file": "calculator.py",
+      "type": "function",
+      "function_name": "calculator"
+    }
+  ]
+}
+```
+
+**Transport Options:**
+- `stdio`: Standard input/output - used for local integration with Claude Desktop, Cursor, etc.
+- `http`: HTTP with Server-Sent Events - for network access
+- `sse`: Alternative SSE transport
+
+### Tool Types
+
+MCP servers support two types of tools:
+
+**Function-based tools** (simple, stateless):
+```json
+{
+  "file": "calculator.py",
+  "type": "function",
+  "function_name": "calculator"
+}
+```
+
+**Class-based tools** (with state, setup/teardown):
+```json
+{
+  "file": "web_search_tool.py",
+  "type": "class",
+  "class_name": "WebSearchTool"
+}
+```
+
+### Claude Desktop Integration
+
+To use your MCP server with Claude Desktop:
+
+1. In the **MCP Servers** tab, select your server
+2. Click "📥 Export for Claude"
+3. Copy the JSON configuration
+4. Add it to your Claude Desktop config file:
+   - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Example Claude Desktop config:
+```json
+{
+  "mcpServers": {
+    "Calculator MCP Server": {
+      "command": "python",
+      "args": ["-m", "mcp_def.server_01_calculator_server"],
+      "description": "MCP server with calculator functionality"
+    }
+  }
+}
+```
+
+### Running MCP Servers
+
+**From command line:**
+```bash
+python example_mcp_usage.py
+```
+
+**In your code:**
+```python
+from mcp_def.mcp_manager import MCPServerManager
+
+server = MCPServerManager("configs_mcp/03_multi_tool_server.json")
+server.initialize()
+server.start_server()  # Blocks for stdio, background for http/sse
+```
+
+## Using MCP Servers with Agents
+
+ADK agents can seamlessly use tools from MCP servers alongside local Python tools. This allows you to:
+- Connect agents to remote tool servers
+- Auto-start MCP servers when initializing agents
+- Mix local tools with MCP server tools
+- Scale tool availability across multiple agents
+
+### Adding MCP Servers to Agent Configs
+
+Add the `mcp_servers` array to any agent configuration:
+
+```json
+{
+  "app_name": "my_agent",
+  "agent_type": "llm",
+  "agent": {
+    "name": "My_Agent",
+    "model": "gemini-2.0-flash",
+    "instructions": "You are a helpful assistant."
+  },
+  "tools": ["calculator"],
+  "mcp_servers": [
+    {
+      "config": "01_calculator_server",
+      "url": "http://localhost:8000",
+      "auto_start": false
+    }
+  ]
+}
+```
+
+### MCP Server Configuration Options
+
+Each MCP server entry supports three fields:
+
+**`config`** (optional): Reference to MCP server config file in `configs_mcp/` (without `.json` extension)
+```json
+{
+  "config": "01_calculator_server"
+}
+```
+
+**`url`** (optional): Direct URL to connect to running MCP server
+```json
+{
+  "url": "http://localhost:8000"
+}
+```
+
+**`auto_start`** (optional, default: false): Automatically start the server if it's not running
+```json
+{
+  "auto_start": true
+}
+```
+
+**Validation Rules**:
+- At least one of `config` or `url` must be provided
+- If only `config`: reads URL from config file or uses auto-start
+- If only `url`: connects to that URL directly (server must be running)
+- If both: uses provided URL, optionally auto-starts if needed
+- Auto-start requires `config` and HTTP/SSE transport (not stdio)
+
+### Connection Scenarios
+
+**Scenario 1: Connect to Running Server (by URL)**
+```json
+{
+  "mcp_servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ]
+}
+```
+Agent connects to MCP server that's already running. Server must be started separately.
+
+**Scenario 2: Connect by Config Reference**
+```json
+{
+  "mcp_servers": [
+    {
+      "config": "01_calculator_server"
+    }
+  ]
+}
+```
+Agent reads URL from `configs_mcp/01_calculator_server.json` and connects. Server must be running.
+
+**Scenario 3: Auto-Start MCP Server**
+```json
+{
+  "mcp_servers": [
+    {
+      "config": "03_multi_tool_server",
+      "auto_start": true
+    }
+  ]
+}
+```
+Agent automatically starts the MCP server in background when initialized. Server stops when agent closes.
+- Requires HTTP or SSE transport in MCP config (stdio cannot be auto-started)
+- Server runs in background thread
+- Perfect for development and testing
+
+**Scenario 4: Mix Local and MCP Tools**
+```json
+{
+  "tools": ["calculator", "get_weather"],
+  "mcp_servers": [
+    {
+      "url": "http://remote-server:8001"
+    }
+  ]
+}
+```
+Agent has access to both local Python tools AND tools from MCP server.
+
+### Usage Examples
+
+**Basic MCP Agent**:
+```python
+import asyncio
+from agent_def import AgentManager
+
+async def main():
+    # Create agent that connects to MCP server
+    agent = AgentManager("configs/12_mcp_calculator_agent.json")
+    
+    # Initialize (connects to MCP servers)
+    await agent.initialize()
+    
+    # Use MCP tools transparently
+    response = await agent.send_message("Calculate 25 * 84")
+    print(response)
+    
+    # Cleanup
+    await agent.close()
+
+asyncio.run(main())
+```
+
+**Auto-Start MCP Server**:
+```python
+# Agent config with auto_start: true
+agent = AgentManager("configs/14_mcp_auto_start_agent.json")
+
+# Initialize - automatically starts MCP server
+await agent.initialize()
+
+# Use tools from auto-started server
+response = await agent.send_message("What's 100 divided by 5?")
+
+# Cleanup - automatically stops MCP server
+await agent.close()
+```
+
+**Mixed Tools Example**:
+```python
+# Agent with both local tools and MCP tools
+agent = AgentManager("configs/13_mcp_mixed_tools_agent.json")
+await agent.initialize()
+
+# Uses local calculator tool
+await agent.send_message("Calculate 456 + 789")
+
+# Uses MCP weather tool
+await agent.send_message("What's the weather in Tokyo?")
+
+# Agent seamlessly chooses appropriate tool
+await agent.send_message("Calculate 50 * 3 and tell me the weather in Paris")
+
+await agent.close()
+```
+
+### Running MCP Integration Examples
+
+The project includes comprehensive examples:
+
+```bash
+python example_mcp_integration.py
+```
+
+This demonstrates:
+1. Agent with MCP server by URL
+2. Agent with auto-start MCP server
+3. Agent with mixed local + MCP tools
+4. Multi-turn chat with MCP tools
+
+### Troubleshooting MCP Connections
+
+**Problem**: "Failed to connect to MCP server"
+- **Solution**: Ensure the MCP server is running at the specified URL
+- Check server logs for errors
+- Verify port is not blocked by firewall
+
+**Problem**: "Auto-start failed"
+- **Solution**: Ensure MCP server config uses `http` or `sse` transport (not `stdio`)
+- Check that port is not already in use
+- Verify config file exists in `configs_mcp/`
+
+**Problem**: "Tools not available"
+- **Solution**: Check that MCP server has successfully loaded tools
+- Use "Initialize Server" button in UI to test server
+- Verify tool files exist in `tools/` directory
+
+**Problem**: "Port conflicts"
+- **Solution**: Change port in MCP server config
+- Stop other services using the same port
+- Use different ports for multiple MCP servers
+
+### Best Practices
+
+1. **Development**: Use auto-start for quick iteration
+2. **Production**: Run MCP servers separately, connect by URL
+3. **Multiple Agents**: Share one MCP server across many agents
+4. **Tool Organization**: Group related tools in dedicated MCP servers
+5. **Transport Selection**: 
+   - Use `stdio` for Claude Desktop/IDE integration
+   - Use `http` for agent-to-server communication
+   - Use `sse` for streaming/real-time updates
+
 ## Project Structure
 
 ```
-adk-agent-studio/
+adk-agent-manager/
 ├── agent_def/
 │   ├── __init__.py           # Exports AgentManager
 │   ├── agent.py              # AgentManager class implementation
 │   ├── base_tool.py          # BaseTool abstract class
 │   └── tool_loader.py        # Tool loading system
+├── mcp_def/
+│   ├── __init__.py           # MCP package init
+│   ├── mcp_manager.py        # MCPServerManager class implementation
+│   └── server.py             # Template standalone MCP server example
 ├── configs/
 │   ├── 01_basic_template_agent.json      # Basic LLM agent
 │   ├── 02_tools_assistant_agent.json     # Agent with calculator & web search
@@ -951,8 +1324,16 @@ adk-agent-studio/
 │   ├── 09_sequential_code_refactorer_agent.json # Code refactor step
 │   ├── 10_structured_product_analyzer_agent.json # JSON output example
 │   ├── 11_structured_task_breakdown_agent.json   # Task breakdown with schema
+│   ├── 12_mcp_calculator_agent.json     # Agent using MCP calculator server
+│   ├── 13_mcp_mixed_tools_agent.json    # Agent with local + MCP tools
+│   ├── 14_mcp_auto_start_agent.json     # Agent with auto-start MCP server
 │   ├── helper_prompt_generator_agent.json # AI prompt generation helper
 │   └── ...                              # Your custom agents
+├── configs_mcp/
+│   ├── 01_calculator_server.json        # Basic MCP server with calculator
+│   ├── 02_weather_server.json           # MCP server with weather tool
+│   ├── 03_multi_tool_server.json        # MCP server with multiple tools
+│   └── ...                              # Your custom MCP servers
 ├── tools/
 │   ├── calculator.py         # Function-based tool
 │   ├── web_search_tool.py    # Class-based tool
@@ -962,6 +1343,8 @@ adk-agent-studio/
 ├── run_ui.sh                 # Unix/Mac UI launcher
 ├── example_usage.py          # Code examples (basic usage)
 ├── example_structured_output.py # Structured output examples
+├── example_mcp_usage.py      # MCP server usage examples
+├── example_mcp_integration.py # Agent + MCP integration examples
 ├── requirements.txt          # Python dependencies
 ├── .env                      # Environment variables (create with GOOGLE_API_KEY)
 └── README.md                 # This file

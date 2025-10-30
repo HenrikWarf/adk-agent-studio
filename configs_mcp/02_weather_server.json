@@ -1,0 +1,17 @@
+{
+  "server": {
+    "name": "Weather MCP Server",
+    "description": "MCP server for weather information",
+    "port": 8001,
+    "host": "0.0.0.0",
+    "transport": "stdio"
+  },
+  "tools": [
+    {
+      "file": "get_weather.py",
+      "type": "function",
+      "function_name": "get_weather"
+    }
+  ]
+}
+

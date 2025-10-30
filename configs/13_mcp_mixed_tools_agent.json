@@ -1,0 +1,24 @@
+{
+  "app_name": "mcp_mixed_tools_agent",
+  "agent_type": "llm",
+  "agent": {
+    "name": "MCP_Mixed_Tools_Agent",
+    "model": "gemini-2.0-flash",
+    "description": "Agent with both local Python tools and MCP server tools",
+    "instruction": "You are a helpful assistant with access to both local tools and MCP server tools. You can perform calculations using local tools and get weather information from MCP servers."
+  },
+  "tools": ["calculator"],
+  "mcp_servers": [
+    {
+      "config": "02_weather_server",
+      "url": "http://localhost:8001"
+    }
+  ],
+  "example_queries": [
+    "Calculate 50 * 25 and tell me the weather in Paris",
+    "What's the weather in New York?",
+    "Calculate the sum of 123 and 456",
+    "How's the weather in London and what's 100 divided by 4?"
+  ]
+}
+

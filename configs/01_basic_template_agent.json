@@ -7,6 +7,11 @@
     "description": "The template agent is a template for creating new agents.",
     "instruction": "You are a template agent. You are used to create new agents."
   },
-  "tools": []
+  "tools": [],
+  "example_queries": [
+    "Hello, how can you help me?",
+    "Tell me about your capabilities",
+    "What can you do?"
+  ]
 }
 

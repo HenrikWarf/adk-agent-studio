@@ -7,6 +7,11 @@
     "description": "Specialized agent for writing code based on requirements.",
     "instruction": "You are an expert code writer. When given requirements or a problem description, write clean, well-structured code. Focus on correctness, readability, and following best practices. Write the code in the appropriate language based on the context. Always include comments explaining key parts of the code. Output ONLY the code block enclosed in triple backticks.",
     "output_key": "generated_code"
-  }
+  },
+  "example_queries": [
+    "Write a function to reverse a string",
+    "Create a binary search implementation",
+    "Build a class for a stack data structure"
+  ]
 }
 

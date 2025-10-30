@@ -63,6 +63,12 @@
       "required": ["project_title", "summary", "tasks"]
     }
   },
-  "tools": []
+  "tools": [],
+  "example_queries": [
+    "Break down the task of building a mobile app for tracking fitness goals",
+    "Help me plan a website redesign project",
+    "I need to organize a company event for 100 people. Break this down into tasks.",
+    "Break down the process of migrating our database to the cloud"
+  ]
 }
 

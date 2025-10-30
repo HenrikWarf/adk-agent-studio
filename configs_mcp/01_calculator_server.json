@@ -1,0 +1,17 @@
+{
+  "server": {
+    "name": "Calculator MCP Server",
+    "description": "Basic MCP server with calculator functionality",
+    "port": 8000,
+    "host": "0.0.0.0",
+    "transport": "stdio"
+  },
+  "tools": [
+    {
+      "file": "calculator.py",
+      "type": "function",
+      "function_name": "calculator"
+    }
+  ]
+}
+

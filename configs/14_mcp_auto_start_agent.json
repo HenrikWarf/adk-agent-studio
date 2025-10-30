@@ -1,0 +1,23 @@
+{
+  "app_name": "mcp_auto_start_agent",
+  "agent_type": "llm",
+  "agent": {
+    "name": "MCP_Auto_Start_Agent",
+    "model": "gemini-2.0-flash",
+    "description": "Agent that auto-starts its MCP server on initialization",
+    "instruction": "You are a helpful assistant with access to calculator and weather tools from auto-started MCP servers."
+  },
+  "mcp_servers": [
+    {
+      "config": "03_multi_tool_server",
+      "auto_start": true
+    }
+  ],
+  "example_queries": [
+    "What's the weather in Berlin?",
+    "Calculate 789 * 12",
+    "Search for Python best practices",
+    "What's 25% of 400 and what's the weather in Tokyo?"
+  ]
+}
+

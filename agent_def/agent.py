@@ -3,6 +3,8 @@ import asyncio
 import json
 import os
 import sys
+import time
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
@@ -13,11 +15,16 @@ from google.adk.agents import Agent, SequentialAgent
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 
 from agent_def.tool_loader import ToolLoader
+from mcp_def.mcp_manager import MCPServerManager
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Suppress deprecation warnings from Google ADK
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='google.adk')
 
 
 @contextmanager
@@ -83,6 +90,10 @@ class AgentManager:
         self.runner: Optional[Runner] = None
         self.session = None
         self.sub_agent_instances = []  # Store sub-agent Agent objects for cleanup
+        
+        # MCP server integration
+        self.mcp_servers = []  # List of MCPServerManager instances for auto-started servers
+        self.mcp_toolsets = []  # List of MCPToolset instances
         
         print(f"AgentManager created: App='{self.app_name}', User='{self.user_id}', Session='{self.session_id}'")
     
@@ -252,6 +263,102 @@ class AgentManager:
         
         return sub_agents
     
+    async def _load_mcp_servers(self):
+        """
+        Load and connect to MCP servers from config.
+        Supports both config file references and direct URLs.
+        Can auto-start servers if needed.
+        
+        Returns:
+            List of MCPToolset instances
+        """
+        mcp_config = self.config.get("mcp_servers", [])
+        if not mcp_config:
+            return []
+        
+        print(f"Loading {len(mcp_config)} MCP server(s)...")
+        mcp_toolsets = []
+        
+        for idx, server_entry in enumerate(mcp_config):
+            try:
+                config_ref = server_entry.get("config")
+                url = server_entry.get("url")
+                auto_start = server_entry.get("auto_start", False)
+                
+                # Validation: at least one of config or url must be provided
+                if not config_ref and not url:
+                    print(f"  Warning: MCP server entry {idx} missing both 'config' and 'url', skipping")
+                    continue
+                
+                server_url = None
+                server_manager = None
+                
+                # Handle auto-start scenario
+                if auto_start and config_ref:
+                    print(f"  Auto-starting MCP server from config: {config_ref}")
+                    try:
+                        config_path = f"configs_mcp/{config_ref}.json"
+                        server_manager = MCPServerManager(config_path)
+                        
+                        # Initialize the server
+                        server_manager.initialize()
+                        
+                        # Check if we need to ensure HTTP transport for auto-start
+                        if server_manager.transport == "stdio":
+                            print(f"    Warning: Cannot auto-start stdio server, use http/sse transport")
+                            print(f"    Skipping auto-start for {config_ref}")
+                            continue
+                        
+                        # Start the server in background
+                        server_manager.start_server()
+                        
+                        # Store the server manager so we can stop it later
+                        self.mcp_servers.append(server_manager)
+                        
+                        # Give server a moment to start
+                        time.sleep(0.5)
+                        
+                        # Determine URL from config
+                        server_url = url or f"http://{server_manager.host}:{server_manager.port}"
+                        print(f"    ✓ Server started at: {server_url}")
+                        
+                    except Exception as e:
+                        print(f"    ✗ Failed to auto-start server '{config_ref}': {e}")
+                        continue
+                
+                # If we didn't auto-start, determine URL
+                if not server_url:
+                    if url:
+                        # Direct URL provided
+                        server_url = url
+                    elif config_ref:
+                        # Load config to get URL
+                        config_path = f"configs_mcp/{config_ref}.json"
+                        if Path(config_path).exists():
+                            with open(config_path, 'r') as f:
+                                mcp_server_config = json.load(f)
+                                server_config = mcp_server_config.get("server", {})
+                                host = server_config.get("host", "localhost")
+                                port = server_config.get("port", 8000)
+                                server_url = f"http://{host}:{port}"
+                        else:
+                            print(f"  Warning: Config file not found: {config_path}")
+                            continue
+                
+                # Create MCPToolset
+                print(f"  Connecting to MCP server at: {server_url}")
+                mcp_toolset = MCPToolset(url=server_url)
+                mcp_toolsets.append(mcp_toolset)
+                self.mcp_toolsets.append(mcp_toolset)
+                print(f"  ✓ Connected to MCP server: {server_url}")
+                
+            except Exception as e:
+                print(f"  Warning: Failed to load MCP server entry {idx}: {e}")
+                continue
+        
+        print(f"Loaded {len(mcp_toolsets)} MCP toolset(s)")
+        return mcp_toolsets
+    
     async def initialize(self):
         """
         Initialize the agent, session, and runner.
@@ -274,6 +381,9 @@ class AgentManager:
             print(f"Loading {len(sub_agent_names)} sub-agent(s)...")
             loaded_sub_agents = await self._load_sub_agents(sub_agent_names)
             print(f"Loaded {len(loaded_sub_agents)} sub-agent(s)")
+        
+        # Load MCP servers if specified in config
+        loaded_mcp_toolsets = await self._load_mcp_servers()
         
         # Determine agent type (default to "llm" for backward compatibility)
         agent_type = self.config.get("agent_type", "llm").lower()
@@ -306,6 +416,11 @@ class AgentManager:
             # Only add sub_agents if there are any
             if loaded_sub_agents:
                 agent_kwargs["sub_agents"] = loaded_sub_agents
+            
+            # Add MCP toolsets if there are any
+            if loaded_mcp_toolsets:
+                agent_kwargs["toolsets"] = loaded_mcp_toolsets
+                print(f"MCP toolsets added to agent: {len(loaded_mcp_toolsets)} toolset(s)")
             
             # Add output_schema if specified (for structured JSON output)
             # Convert JSON schema to Pydantic model
@@ -456,10 +571,18 @@ class AgentManager:
     
     async def close(self):
         """
-        Cleanup resources including tools.
+        Cleanup resources including tools and MCP servers.
         """
         # Cleanup tools
         self.tool_loader.cleanup()
+        
+        # Stop any auto-started MCP servers
+        for server in self.mcp_servers:
+            try:
+                server.stop_server()
+            except Exception as e:
+                print(f"Warning: Error stopping MCP server: {e}")
+        
         print(f"AgentManager closed")
 
 

@@ -10,6 +10,11 @@
     "07_sequential_code_writer_agent",
     "08_sequential_code_reviewer_agent",
     "09_sequential_code_refactorer_agent"
+  ],
+  "example_queries": [
+    "Create a Python function to calculate factorial",
+    "Write a function to validate email addresses",
+    "Build a class for managing a simple to-do list"
   ]
 }
 

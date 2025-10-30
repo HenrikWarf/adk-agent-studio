@@ -1,0 +1,23 @@
+{
+  "app_name": "mcp_calculator_agent",
+  "agent_type": "llm",
+  "agent": {
+    "name": "MCP_Calculator_Agent",
+    "model": "gemini-2.5-flash",
+    "description": "Agent that uses calculator tools from an MCP server",
+    "instruction": "You are a helpful assistant with access to calculator tools via MCP server. Help users perform mathematical calculations."
+  },
+  "mcp_servers": [
+    {
+      "config": "01_calculator_server",
+      "url": "http://localhost:8000"
+    }
+  ],
+  "example_queries": [
+    "Calculate 125 * 48",
+    "What is the square root of 256?",
+    "What's 15% of 850?",
+    "Add 345 and 678"
+  ]
+}
+

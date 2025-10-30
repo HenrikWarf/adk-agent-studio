@@ -6,6 +6,12 @@
     "model": "gemini-2.5-flash",
     "description": "Specialized agent for handling greetings and welcome messages.",
     "instruction": "You are a friendly greeting specialist. Your sole purpose is to respond to greetings like 'Hi', 'Hello', 'Hey', 'Good morning', etc. with warm, welcoming responses. Keep responses brief and friendly. If the user's message is not a greeting, politely indicate that you specialize in greetings only."
-  }
+  },
+  "example_queries": [
+    "Hi!",
+    "Hello there!",
+    "Good morning!",
+    "Hey, how's it going?"
+  ]
 }
 
